@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+#ddev-generated
+## Description: Run the Tideways CLI inside the web container (run/list/import/...)
+## Usage: tideways <command> [args]
+## Example: "ddev tideways list" | "ddev tideways run [project] php bin/magento cron:run" | "ddev tideways import <token>"
+## ProjectTypes: php,magento,magento2,drupal,drupal7,drupal8,drupal9,drupal10,drupal11,typo3,backdrop,wordpress,shopware6,laravel,silverstripe,craftcms
+
+if ! command -v tideways >/dev/null 2>&1; then
+  echo "The Tideways CLI is not installed in the web container." >&2
+  echo "Run 'ddev add-on get OpenForgeProject/ddev-tideways' and 'ddev restart'." >&2
+  exit 1
+fi
+
+exec tideways "$@"

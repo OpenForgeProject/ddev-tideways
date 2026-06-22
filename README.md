@@ -1,109 +1,65 @@
 [![add-on registry](https://img.shields.io/badge/DDEV-Add--on_Registry-blue)](https://addons.ddev.com)
-[![tests](https://github.com/ddev/ddev-addon-template/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/ddev/ddev-addon-template/actions/workflows/tests.yml?query=branch%3Amain)
-[![last commit](https://img.shields.io/github/last-commit/ddev/ddev-addon-template)](https://github.com/ddev/ddev-addon-template/commits)
-[![release](https://img.shields.io/github/v/release/ddev/ddev-addon-template)](https://github.com/ddev/ddev-addon-template/releases/latest)
+[![tests](https://github.com/OpenForgeProject/ddev-tideways/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/OpenForgeProject/ddev-tideways/actions/workflows/tests.yml?query=branch%3Amain)
+[![last commit](https://img.shields.io/github/last-commit/OpenForgeProject/ddev-tideways)](https://github.com/OpenForgeProject/ddev-tideways/commits)
+[![release](https://img.shields.io/github/v/release/OpenForgeProject/ddev-tideways)](https://github.com/OpenForgeProject/ddev-tideways/releases/latest)
 
-# DDEV Add-on Template <!-- omit in toc -->
+# DDEV Tideways
 
-* [What is DDEV Add-on Template?](#what-is-ddev-add-on-template)
-* [Update Checker](#update-checker)
-* [TL;DR](#tldr)
-* [Components of the repository](#components-of-the-repository)
-* [Getting started](#getting-started)
-* [How to debug in Github Actions](#how-to-debug-in-github-actions)
-* [Resources](#resources)
-* [Credits](#credits)
+Integrates the [Tideways](https://tideways.com/) PHP profiler into a [DDEV](https://ddev.com/) project. It installs the Tideways PHP extension and CLI into the `web` container, runs the Tideways daemon as a service, and configures everything through environment variables.
 
-## What is DDEV Add-on Template?
-
-This repository is a template for providing [DDEV](https://docs.ddev.com) add-ons and services.
-
-In DDEV, add-ons can be installed from the command line using the `ddev add-on get` command, for example, `ddev add-on get ddev/ddev-redis` or `ddev add-on get ddev/ddev-solr`.
-
-This repository is a quick way to get started. You can create a new repo from this one by clicking <kbd>Use this template &#8964;</kbd> button in the top right corner of the page.
-
-![template button](images/template-button.png)
-
-## Update Checker
-
-Run the update checker script periodically in your add-on to verify it is up to date:
+## Installation
 
 ```bash
-curl -fsSL https://ddev.com/s/addon-update-checker.sh | bash
+ddev add-on get OpenForgeProject/ddev-tideways
+ddev dotenv set .ddev/.env.tideways --tideways-apikey=YOUR_API_KEY
+ddev restart
 ```
 
-## TL;DR
+Find your API key in your Tideways project settings. The key is stored in `.ddev/.env.tideways` — commit or git-ignore that file per your team's policy.
 
-1. Click the green <kbd>Use this template &#8964;</kbd> button (top right) > `Create a new repository`.
-2. Name your repository using the `ddev-` prefix (e.g. `ddev-foobar`).
-3. Add a meaningful description with relevant keywords for discoverability.
-4. Click <kbd>Create repository</kbd> and wait for the automated "First time setup" commit.
+## Configuration
 
-> [!NOTE]
-> Automated updates to the `README.md` happen in a minute or so after creation.
+Change any value with `ddev dotenv set .ddev/.env.tideways --<flag>=<value>` followed by `ddev restart`:
 
-5. Clone your repository locally (use the <kbd><> Code &#8964;</kbd> button for the URL).
-6. Prepare your add-on files and tests, see [Getting started](#getting-started) for details.
-7. Create a new PR for review and discussion (avoid committing directly to `main`, as that bypasses the collaborative process).
-8. Merge or squash your PR into `main` (squash is preferred for a cleaner commit history).
-9. Create a new [release](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository).
-10. When ready to share, make your add-on discoverable by adding the `ddev-get` [topic](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/classifying-your-repository-with-topics).
-11. Check out the [DDEV Add-on Maintenance Guide](https://ddev.com/blog/ddev-add-on-maintenance-guide/).
+| Variable | Flag | Default |
+| -------- | ---- | ------- |
+| `TIDEWAYS_APIKEY` | `--tideways-apikey` | _(empty)_ |
+| `TIDEWAYS_ENVIRONMENT` | `--tideways-environment` | `ddev` |
+| `TIDEWAYS_SERVICE` | `--tideways-service` | `app` |
+| `TIDEWAYS_TRACE_SAMPLE_RATE` | `--tideways-trace-sample-rate` | `100` |
+| `TIDEWAYS_CLI_TOKEN` | `--tideways-cli-token` | _(empty)_ |
+| `TIDEWAYS_DAEMON_DOCKER_IMAGE` | `--tideways-daemon-docker-image` | `ghcr.io/tideways/daemon:latest` |
 
-## Components of the repository
+`TIDEWAYS_CONNECTION` is fixed to `tcp://tideways-daemon:9135`.
 
-* The fundamental contents of the add-on service or other component. For example, in this template there is a [docker-compose.addon-template.yaml](docker-compose.addon-template.yaml) file.
-* An [install.yaml](install.yaml) file that describes how to install the service or other component.
-* A test suite in [test.bats](tests/test.bats) that makes sure the service continues to work as expected.
-* [Github actions setup](.github/workflows/tests.yml) so that the tests run automatically when you push to the repository.
+## Usage
 
-## Getting started
+```bash
+ddev tideways-doctor status   # extension, CLI, daemon and configuration
+ddev tideways-doctor test     # generate traffic and confirm data is collected
+ddev tideways-doctor logs -f  # follow the daemon logs
+```
 
-1. Choose a good descriptive name for your add-on. It should probably start with "ddev-" and include the basic service or functionality. If it's particular to a specific CMS, perhaps `ddev-<CMS>-servicename`.
-2. Create the new template repository by using the template button.
-3. Add the files that need to be added to a DDEV project to the repository. If your add-on does not add a new service, remove `docker-compose.<addon-name>.yaml` file.
-4. Update the `install.yaml` to give the necessary instructions for installing the add-on:
+`ddev tideways …` passes through to the Tideways CLI for profiling console scripts. Import your CLI settings once (token from `https://app.tideways.io/user/cli-import-settings`), then trace a command:
 
-   * The fundamental line is the `project_files` directive, a list of files to be copied from this repo into the project `.ddev` directory.
-   * You can optionally add files to the `global_files` directive as well, which will cause files to be placed in the global `~/.ddev` directory.
-   * Make sure to have the `ddev_version_constraint` directive, to keep the add-on users up to date.
-   * Finally, `pre_install_actions` and `post_install_actions` are supported. These can use the host-side environment variables documented [in DDEV docs](https://docs.ddev.com/en/stable/users/extend/custom-commands/#environment-variables-provided).
+```bash
+ddev tideways import <token>                       # re-run after a web image rebuild
+ddev tideways run [project] php bin/magento cron:run
+```
 
-5. Update `tests/test.bats` to provide a reasonable test for your repository:
+## No data in the dashboard?
 
-   * In most cases, you only need to modify the `health_checks()` function and update the `GITHUB_REPO` variable to match your repository.
-   * Tests will run automatically on every push to the repository, and periodically each night.
-   * Please make sure to address test failures when they happen. Others will be depending on you.
-   * Bats is a testing framework that just uses Bash. To run a Bats test locally, you have to install [bats-core](https://bats-core.readthedocs.io/en/stable/installation.html) and its [libraries](https://github.com/ztombol/bats-docs) first.
-   * Then you download your add-on, and finally run `bats ./tests/test.bats` within the root of the uncompressed directory.
-   * To learn more about Bats see the [documentation](https://bats-core.readthedocs.io/en/stable/).
-   * For complex test scenarios, you can use `tests/testdata/` directory to store test fixtures. See examples in:
-     * [ddev-cypress](https://github.com/ddev/ddev-cypress/tree/main/tests)
-     * [ddev-rabbitmq](https://github.com/ddev/ddev-rabbitmq/tree/main/tests)
-     * [ddev-typo3-solr](https://github.com/ddev/ddev-typo3-solr/tree/main/tests)
-     * [ddev-upsun](https://github.com/ddev/ddev-upsun/tree/main/tests)
+Tideways silently discards data when the target does not exist within your account limits:
 
-6. When everything is working, including the tests, you can push the repository to GitHub.
-7. Create a [release](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository) on GitHub.
-8. Test manually with `ddev add-on get <owner/repo>`.
-9. You can test PRs with `ddev add-on get https://github.com/<user>/<repo>/tarball/<branch>` or `https://github.com/<user>/<repo>/tarball/refs/pull/<pr-number>/head`.
-10. You can test add-ons locally without GitHub by downloading them, making changes and running `ddev add-on get /path/to/add-on-directory`.
-11. Update the [`README.md`](./README_ADDON.md) to describe the add-on, how to use it, and how to contribute. If there are any manual actions that have to be taken, please explain them. If it requires special configuration of the using project, please explain how to do those. Examples in [ddev/ddev-solr](https://github.com/ddev/ddev-solr), [ddev/ddev-memcached](https://github.com/ddev/ddev-memcached), and (advanced) [ddev-platformsh](https://github.com/ddev/ddev-platformsh).
-12. Add a clear short description to your repo, and add the `ddev-get` [topic](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/classifying-your-repository-with-topics). It will immediately be added to the list provided by `ddev add-on list --all` and appear in the [DDEV Add-on Registry](https://addons.ddev.com/) within about 24 hours.
-13. Once it matures and you want it to become an officially maintained add-on (i.e., supported by the DDEV team), open an issue in the [DDEV issue queue](https://github.com/ddev/ddev/issues).
+* **Environment** — `TIDEWAYS_ENVIRONMENT` must be an environment that exists in your project.
+* **Service** — a service beyond your plan's service limit is discarded; `app` is Tideways' default service, so keep it unless you have a free service slot.
 
-## How to debug in GitHub Actions
+## Removal
 
-See [full instructions](./README_DEBUG.md).
-
-## Resources
-
-* [DDEV Add-ons: Creating, maintaining, testing](https://www.youtube.com/watch?v=TmXqQe48iqE) (part of the [DDEV Contributor Live Training](https://ddev.com/blog/contributor-training))
-* [Advanced Add-On Techniques](https://ddev.com/blog/advanced-add-on-contributor-training/)
-* [DDEV Add-on Maintenance Guide](https://ddev.com/blog/ddev-add-on-maintenance-guide/)
-* [DDEV Documentation for Add-ons](https://docs.ddev.com/en/stable/users/extend/additional-services/)
-* [DDEV Add-on Registry](https://addons.ddev.com/)
+```bash
+ddev add-on remove tideways
+```
 
 ## Credits
 
-**Contributed and maintained by @CONTRIBUTOR**
+Contributed and maintained by [@OpenForgeProject](https://github.com/OpenForgeProject)

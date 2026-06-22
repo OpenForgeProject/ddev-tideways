@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+
+#ddev-generated
+## Description: Inspect and test the Tideways integration (extension + daemon)
+## Usage: tideways-doctor [status|test|logs]
+## Example: "ddev tideways-doctor status" | "ddev tideways-doctor test" | "ddev tideways-doctor logs -f"
+
+set -u -o pipefail
+
+DAEMON_SERVICE="tideways-daemon"
+
+measurements() {
+  ddev logs -s "${DAEMON_SERVICE}" 2>/dev/null \
+    | grep -oE 'Collected [0-9]+ measurements' | tail -1 | grep -oE '[0-9]+' || echo 0
+}
+
+cmd_status() {
+  echo "Tideways integration status"
+  echo "==========================="
+
+  echo -n "PHP extension:        "
+  if ddev exec php -r 'exit(extension_loaded("tideways") ? 0 : 1);' >/dev/null 2>&1; then
+    echo "loaded ($(ddev exec php -r 'echo phpversion("tideways");' 2>/dev/null))"
+  else
+    echo "NOT loaded"
+  fi
+
+  echo -n "Tideways CLI:         "
+  if ddev exec 'command -v tideways' >/dev/null 2>&1; then
+    echo "installed ($(ddev exec 'tideways version 2>/dev/null' | head -1))"
+  else
+    echo "NOT installed"
+  fi
+
+  local apikey clitoken
+  apikey="$(ddev exec 'printf %s "${TIDEWAYS_APIKEY:-}"' 2>/dev/null)"
+  echo -n "API key:              "
+  if [ -n "${apikey}" ]; then echo "set (${apikey:0:6}***)"; else echo "NOT set"; fi
+
+  clitoken="$(ddev exec 'printf %s "${TIDEWAYS_CLI_TOKEN:-}"' 2>/dev/null)"
+  echo -n "CLI token:            "
+  if [ -n "${clitoken}" ]; then echo "set"; else echo "not set (needed for 'ddev tideways run')"; fi
+
+  echo "Environment:          $(ddev exec 'printf %s "${TIDEWAYS_ENVIRONMENT:-}"' 2>/dev/null)"
+  echo "Service:              $(ddev exec 'printf %s "${TIDEWAYS_SERVICE:-}"' 2>/dev/null)"
+  echo "Connection:           $(ddev exec 'printf %s "${TIDEWAYS_CONNECTION:-}"' 2>/dev/null)"
+
+  echo -n "Daemon reachable:     "
+  if ddev exec "timeout 3 bash -c '</dev/tcp/tideways-daemon/9135'" >/dev/null 2>&1; then
+    echo "yes (tideways-daemon:9135)"
+  else
+    echo "NO"
+  fi
+
+  echo
+  echo "Last daemon report:"
+  ddev logs -s "${DAEMON_SERVICE}" 2>/dev/null | grep 'Collected' | tail -1 | sed 's/^/  /' || echo "  (none yet)"
+}
+
+cmd_test() {
+  local apikey env host before after
+  apikey="$(ddev exec 'printf %s "${TIDEWAYS_APIKEY:-}"' 2>/dev/null)"
+  env="$(ddev exec 'printf %s "${TIDEWAYS_ENVIRONMENT:-ddev}"' 2>/dev/null)"
+
+  if [ -z "${apikey}" ]; then
+    echo "⚠️  No API key configured. Set it first:"
+    echo "    ddev dotenv set .ddev/.env.tideways --tideways-apikey=YOUR_KEY && ddev restart"
+    exit 1
+  fi
+
+  host="${DDEV_PRIMARY_URL#*://}"
+  echo "Generating test traffic against https://${host}/ ..."
+  before="$(measurements)"
+  ddev exec "for i in \$(seq 1 15); do curl -ksSL -o /dev/null -H 'Host: ${host}' https://127.0.0.1/; done" >/dev/null 2>&1 || true
+
+  echo "Waiting for the daemon to report (it flushes every ~60s)..."
+  after="${before}"
+  for _ in $(seq 1 18); do
+    sleep 5
+    after="$(measurements)"
+    [ "${after:-0}" -gt "${before:-0}" ] && break
+  done
+
+  echo
+  if [ "${after:-0}" -gt "${before:-0}" ]; then
+    echo "✅ Daemon collected new measurements (${before} → ${after})."
+    echo "   Data is flowing to Tideways environment '${env}'. Check your dashboard."
+    echo "   For a guaranteed single trace, use: ddev tideways run [project] php -r 'usleep(50000);'"
+  else
+    echo "⚠️  No new measurements observed within 90s."
+    echo "   Verify: API key is valid, the '${env}' environment exists in your Tideways project,"
+    echo "   and the site returns 200 responses. See 'ddev tideways-doctor logs'."
+  fi
+}
+
+case "${1:-status}" in
+  status) cmd_status ;;
+  test)   cmd_test ;;
+  logs)   shift; ddev logs -s "${DAEMON_SERVICE}" "$@" ;;
+  *)      echo "Usage: ddev tideways-doctor [status|test|logs]" >&2; exit 1 ;;
+esac

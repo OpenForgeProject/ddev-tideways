@@ -1,0 +1,25 @@
+name: update-checker
+
+# Periodically checks this add-on against the upstream ddev/ddev-addon-template
+# so maintenance/structural updates are not missed.
+# See https://ddev.com/blog/ddev-add-on-maintenance-guide/
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  update-checker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run DDEV add-on update checker
+        run: curl -fsSL https://ddev.com/s/addon-update-checker.sh | bash

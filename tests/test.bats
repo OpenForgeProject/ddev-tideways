@@ -16,7 +16,7 @@ setup() {
   set -eu -o pipefail
 
   # Override this variable for your add-on:
-  export GITHUB_REPO=ddev/ddev-addon-template
+  export GITHUB_REPO=OpenForgeProject/ddev-tideways
 
   TEST_BREW_PREFIX="$(brew --prefix 2>/dev/null || true)"
   export BATS_LIB_PATH="${BATS_LIB_PATH}:${TEST_BREW_PREFIX}/lib:/usr/lib/bats"
@@ -39,17 +39,37 @@ setup() {
 }
 
 health_checks() {
-  # Do something useful here that verifies the add-on
-
-  # You can check for specific information in headers:
-  # run curl -sfI https://${PROJNAME}.ddev.site
-  # assert_output --partial "HTTP/2 200"
-  # assert_output --partial "test_header"
-
-  # Or check if some command gives expected output:
-  DDEV_DEBUG=true run ddev launch
+  # The Tideways PHP extension must be loaded in the web container.
+  run ddev exec php -m
   assert_success
-  assert_output --partial "FULLURL https://${PROJNAME}.ddev.site"
+  assert_output --partial "tideways"
+
+  # The extension must be pointed at the daemon service via env var.
+  run ddev exec 'printf %s "${TIDEWAYS_CONNECTION}"'
+  assert_success
+  assert_output --partial "tideways-daemon:9135"
+
+  # Default service and environment must be applied in the web container.
+  run ddev exec 'printf %s "${TIDEWAYS_SERVICE}"'
+  assert_success
+  assert_output --partial "app"
+
+  run ddev exec 'printf %s "${TIDEWAYS_ENVIRONMENT}"'
+  assert_success
+  assert_output --partial "ddev"
+
+  # The daemon container must be running and reachable on its port.
+  run ddev exec "timeout 5 bash -c '</dev/tcp/tideways-daemon/9135'"
+  assert_success
+
+  # The Tideways CLI must be installed and callable through ddev.
+  run ddev tideways version
+  assert_success
+
+  # The diagnostics command must be installed.
+  run ddev tideways-doctor status
+  assert_success
+  assert_output --partial "PHP extension:"
 }
 
 teardown() {

@@ -1,0 +1,10 @@
+#ddev-generated
+# Installs the Tideways PHP extension and the Tideways CLI into the web container.
+# Extension: https://support.tideways.com/documentation/setup/installation/ddev.html
+# CLI:       https://support.tideways.com/documentation/reference/commandline-interface/overview.html
+SHELL ["/bin/bash", "-c"]
+RUN set -ex; \
+    wget -qO - 'https://packages.tideways.com/key.gpg' | sudo tee /usr/share/keyrings/tideways.asc > /dev/null; \
+    echo 'deb [signed-by=/usr/share/keyrings/tideways.asc] https://packages.tideways.com/apt-packages-main any-version main' | sudo tee /etc/apt/sources.list.d/tideways.list; \
+    sudo apt-get update; \
+    sudo apt-get install -y tideways-php tideways-cli;

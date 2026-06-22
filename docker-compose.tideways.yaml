@@ -1,0 +1,35 @@
+#ddev-generated
+services:
+  # Configure the Tideways PHP extension via environment variables in the web
+  # container. This is the recommended approach for containerized setups and
+  # keeps all configuration in one place (no php.ini editing required).
+  #
+  # Override any value through .ddev/.env.tideways, for example:
+  #   ddev dotenv set .ddev/.env.tideways --tideways-apikey=tw_xxxxxxxx
+  #   ddev dotenv set .ddev/.env.tideways --tideways-environment=staging
+  #   ddev restart
+  web:
+    environment:
+      - TIDEWAYS_CONNECTION=tcp://tideways-daemon:9135
+      - TIDEWAYS_APIKEY=${TIDEWAYS_APIKEY:-}
+      - TIDEWAYS_ENVIRONMENT=${TIDEWAYS_ENVIRONMENT:-ddev}
+      # Token for the `tideways` CLI (ddev tideways run/list/...). Optional.
+      - TIDEWAYS_CLI_TOKEN=${TIDEWAYS_CLI_TOKEN:-}
+      # Tideways' default service is "app"; reuse it so we don't create a new
+      # service (which would be discarded once the account's service limit is hit).
+      - TIDEWAYS_SERVICE=${TIDEWAYS_SERVICE:-app}
+      - TIDEWAYS_TRACE_SAMPLE_RATE=${TIDEWAYS_TRACE_SAMPLE_RATE:-100}
+
+  # The daemon receives traces from the extension on port 9135 and forwards
+  # them to the Tideways platform, tagged with the configured environment.
+  tideways-daemon:
+    container_name: ddev-${DDEV_SITENAME}-tideways-daemon
+    image: ${TIDEWAYS_DAEMON_DOCKER_IMAGE:-ghcr.io/tideways/daemon:latest}
+    command: ["--env=${TIDEWAYS_ENVIRONMENT:-ddev}"]
+    restart: "no"
+    expose:
+      - "9135"
+    # These labels ensure this service is discoverable by DDEV.
+    labels:
+      com.ddev.site-name: ${DDEV_SITENAME}
+      com.ddev.approot: ${DDEV_APPROOT}
