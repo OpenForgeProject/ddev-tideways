@@ -16,7 +16,7 @@ project_files:
 global_files:
 
 # Validated against the running DDEV executable; install is blocked otherwise.
-ddev_version_constraint: '>= v1.24.0'
+ddev_version_constraint: '>= v1.24.10'
 
 dependencies:
 
