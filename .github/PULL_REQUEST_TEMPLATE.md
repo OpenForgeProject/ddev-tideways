@@ -4,6 +4,10 @@
 
 <!-- Provide a brief description of the issue. -->
 
+## Short Summary (TL;DR)
+
+<!-- Add a one- or two-sentence summary of the key change(s). -->
+
 ## How This PR Solves The Issue
 
 <!-- Describe the key change(s) in this PR that address the issue above. -->
@@ -13,6 +17,7 @@
 <!-- If this PR changes logic, consider adding additional steps or context to the instructions below. -->
 
 ```bash
+ddev add-on get <your-name>/<your-repo> --pr REPLACE_ME_WITH_THIS_PR_NUMBER
 ddev add-on get https://github.com/OpenForgeProject/ddev-tideways/tarball/refs/pull/REPLACE_ME_WITH_THIS_PR_NUMBER/head
 ddev restart
 ```
